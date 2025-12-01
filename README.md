@@ -14,6 +14,57 @@ Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
 The page will reload when you make changes.\
 You may also see any lint errors in the console.
 
+## Database migrations and server-side protections
+
+I added a SQL migration to enforce portfolio cash constraints server-side and provide a safe RPC to upsert portfolios.
+
+- File: `db/migrations/2025-10-28_portfolio_clamp_and_safe_upsert.sql`
+
+This migration does two things:
+
+1. Adds a trigger function (`clamp_portfolio_cash`) that prevents any inserted or updated `cash` value
+	from being greater than the existing saved cash for that user+mode, or greater than the configured
+	STARTING_CASH (75000) when creating a new portfolio. This protects persisted data from client-side tampering.
+
+2. Adds an RPC function `rpc_safe_upsert_portfolio(user_uuid, mode, cash, positions)` which performs
+	an upsert while ensuring cash cannot increase. This is the recommended method for clients to update portfolios.
+
+Applying the migration
+
+If you use the Supabase CLI (recommended):
+
+```powershell
+# Log into supabase (if needed)
+supabase login
+# Navigate to your project (or set SUPABASE_URL/SUPABASE_KEY env vars)
+supabase db reset --file db/migrations/2025-10-28_portfolio_clamp_and_safe_upsert.sql
+```
+
+Or apply the SQL directly using psql:
+
+```powershell
+# Replace values with your DB connection string
+psql "postgresql://<user>:<pass>@<host>:<port>/<db>" -f db/migrations/2025-10-28_portfolio_clamp_and_safe_upsert.sql
+```
+
+After applying, clients can call the RPC via Supabase client like:
+
+```js
+// Example client-side using supabase-js
+const { data, error } = await supabase.rpc('rpc_safe_upsert_portfolio', {
+  p_user: user.id,
+  p_mode: 'default',
+  p_cash: newCash,
+  p_positions: newPositions,
+});
+
+if (error) console.error('RPC error', error);
+```
+
+Notes:
+- Triggers run inside the database and are stronger than client-side checks. Still consider RLS policies to control who can call RPCs.
+- The migration assumes a `user_portfolios` table with columns `(id, user_id uuid, mode text, cash numeric, positions jsonb)`.
+
 ### `npm test`
 
 Launches the test runner in the interactive watch mode.\

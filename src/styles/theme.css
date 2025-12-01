@@ -1,0 +1,13 @@
+
+:root{
+  --color-bg: #0f1724;
+  --color-surface: #0b1220;
+  --color-primary: #3b82f6;
+  --color-accent: #8b5cf6;
+  --color-muted: #94a3b8;
+  --radius-md: 12px;
+}
+.app-surface { background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent); }
+.btn-primary { background: linear-gradient(90deg, var(--color-primary), var(--color-accent)); color: white; padding: 0.5rem 1rem; border-radius: 0.5rem; }
+.card { background: var(--color-surface); border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.04); }
+body { -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
