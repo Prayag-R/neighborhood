@@ -24,7 +24,7 @@ const supabase = createClient(
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://neighborhood-e2i10ed9y-prayag-rs-projects.vercel.app'
+  'https://neighborhood-pearl.vercel.app/'
 ];
 
 app.use(cors({ 
