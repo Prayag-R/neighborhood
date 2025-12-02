@@ -10,7 +10,10 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-
+app.get("/test", (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.json({ ok: true });
+});
 // Backend-only keys
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
