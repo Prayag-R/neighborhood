@@ -1,9 +1,9 @@
-import { Search, X, Settings, LogOut, ChevronDown, MapPin, Trophy } from 'lucide-react';
+import { Search, X, Settings, LogOut, ChevronDown, MapPin, Trophy, Sun, Moon } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
-export default function Navbar({ user, darkMode, setDarkMode, onLogout }) {
+export default function Navbar({ user, darkMode, setDarkMode, onLogout, saveDarkModePreference }) {
   const [searchInput, setSearchInput] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -63,6 +63,14 @@ export default function Navbar({ user, darkMode, setDarkMode, onLogout }) {
     setSearchInput('');
     setResults([]);
     setShowResults(false);
+  };
+
+  const handleDarkModeToggle = () => {
+    const newDarkMode = !darkMode;
+    setDarkMode(newDarkMode);
+    if (saveDarkModePreference) {
+      saveDarkModePreference(newDarkMode);
+    }
   };
 
   const colors = darkMode
@@ -205,18 +213,14 @@ export default function Navbar({ user, darkMode, setDarkMode, onLogout }) {
 
             {/* Theme Toggle */}
             <button
-              onClick={() => setDarkMode(!darkMode)}
+              onClick={handleDarkModeToggle}
               className={`p-2 rounded-full transition ${colors.hoverLight}`}
               title={darkMode ? 'Light mode' : 'Dark mode'}
             >
               {darkMode ? (
-                <svg className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l-2.83-2.83a1 1 0 00-1.415 1.415l2.83 2.83a1 1 0 001.415-1.415zM2.05 6.464l2.83 2.83a1 1 0 01-1.415 1.415L.636 7.879a1 1 0 011.415-1.415zm12.728 0l-2.83 2.83a1 1 0 001.415 1.415l2.83-2.83a1 1 0 00-1.415-1.415zM2.05 13.536l2.83-2.83a1 1 0 01-1.415-1.415L.636 12.12a1 1 0 001.415 1.415zm12.728 0l-2.83-2.83a1 1 0 001.415-1.415l2.83 2.83a1 1 0 00-1.415 1.415z" clipRule="evenodd" />
-                </svg>
+                <Sun size={20} className="text-yellow-400" />
               ) : (
-                <svg className="w-5 h-5 text-gray-700" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                </svg>
+                <Moon size={20} className="text-slate-600" />
               )}
             </button>
 

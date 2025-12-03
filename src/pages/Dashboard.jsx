@@ -1,5 +1,5 @@
 // src/pages/Dashboard.jsx - MAIN LAYOUT & ROUTER
-import { LogOut, Settings as SettingsIcon, Zap, LayoutDashboard, Network, X } from 'lucide-react';
+import { LogOut, Settings as SettingsIcon, Zap, LayoutDashboard, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Navbar from './Navbar';
 import DashboardHome from './DashboardPages/DashboardHome';
@@ -9,6 +9,10 @@ import Settings from './DashboardPages/Settings';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
 export default function Dashboard({ user, neighborhood, onLogout, darkMode, setDarkMode, saveDarkModePreference }) {
+  // Make sure saveDarkModePreference is available
+  if (!saveDarkModePreference) {
+    console.warn('saveDarkModePreference not passed to Dashboard');
+  }
   const [activeTab, setActiveTab] = useState('home');
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -127,6 +131,7 @@ export default function Dashboard({ user, neighborhood, onLogout, darkMode, setD
         user={user}
         darkMode={darkMode}
         setDarkMode={setDarkMode}
+        saveDarkModePreference={saveDarkModePreference}
         onLogout={() => setShowLogoutConfirm(true)}
       />
 
