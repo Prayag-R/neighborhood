@@ -134,13 +134,6 @@ export default function Dashboard({ user, neighborhood, onLogout, darkMode, setD
         <div className="flex">
           {/* Sidebar */}
           <aside className={`w-64 flex-shrink-0 min-h-screen sticky top-16 border-r ${colors.border} ${colors.nav} p-6 shadow-xl`}>
-            <div className="flex items-center gap-2 mb-10">
-              <div className={`w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg`}>
-                <Network size={18} className="text-white" />
-              </div>
-              <span className={`font-extrabold text-2xl ${colors.text}`}>SkillShare</span>
-            </div>
-
             <nav className="space-y-2">
               {navItems.map((item) => (
                 <button
