@@ -1,5 +1,5 @@
 // src/pages/Dashboard.jsx - MAIN LAYOUT & ROUTER
-import { LogOut, Settings as SettingsIcon, Zap, LayoutDashboard, Network, X } from 'lucide-react';
+import { LogOut, Settings as SettingsIcon, Zap, LayoutDashboard, Network, X, Search as SearchIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import DashboardHome from './DashboardPages/DashboardHome';
 import MySkills from './DashboardPages/MySkills';
@@ -159,10 +159,24 @@ export default function Dashboard({ user, neighborhood, onLogout, darkMode, setD
         {/* Main Content Area */}
         <main className="flex-1 p-8">
           <header className={`mb-10 pb-4 border-b ${colors.border}`}>
-            <h1 className={`text-4xl font-extrabold ${colors.text}`}>
-              {navItems.find(item => item.id === activeTab)?.label}
-            </h1>
-            <p className="text-sm text-gray-500">Welcome, {userName}!</p>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className={`text-4xl font-extrabold ${colors.text}`}>
+                  {navItems.find(item => item.id === activeTab)?.label}
+                </h1>
+                <p className="text-sm text-gray-500">Welcome, {userName}!</p>
+              </div>
+            </div>
+
+            {/* Search Bar */}
+            <div className={`relative flex items-center ${colors.inputBg} border ${colors.border} rounded-lg p-1 max-w-md`}>
+              <SearchIcon size={18} className={`ml-3 ${colors.textMuted}`} />
+              <input
+                type="text"
+                placeholder="Search for skills or people..."
+                className={`flex-1 px-4 py-2.5 ${colors.inputBg} border-0 focus:outline-none ${colors.text} text-sm placeholder-gray-400`}
+              />
+            </div>
           </header>
 
           {/* Render the Active Tab Content */}
