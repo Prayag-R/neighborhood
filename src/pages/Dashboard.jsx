@@ -1,22 +1,20 @@
-// src/pages/Dashboard.jsx - MAIN LAYOUT & ROUTER
+// src/pages/Dashboard.jsx
 import { LogOut, Settings as SettingsIcon, Zap, LayoutDashboard, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Navbar from './Navbar';
 import DashboardHome from './DashboardPages/DashboardHome';
 import MySkills from './DashboardPages/MySkills';
 import Settings from './DashboardPages/Settings';
+import UserProfile from './UserProfile';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
 export default function Dashboard({ user, neighborhood, onLogout, darkMode, setDarkMode, saveDarkModePreference }) {
-  // Make sure saveDarkModePreference is available
-  if (!saveDarkModePreference) {
-    console.warn('saveDarkModePreference not passed to Dashboard');
-  }
   const [activeTab, setActiveTab] = useState('home');
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [viewingProfileId, setViewingProfileId] = useState(null);
 
   // Handle browser back/forward for tabs
   useEffect(() => {
@@ -90,6 +88,62 @@ export default function Dashboard({ user, neighborhood, onLogout, darkMode, setD
     );
   }
 
+  // If viewing another user's profile
+  if (viewingProfileId) {
+    return (
+      <>
+        <Navbar 
+          user={user}
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+          saveDarkModePreference={saveDarkModePreference}
+          onViewProfile={setViewingProfileId}
+          onLogout={() => setShowLogoutConfirm(true)}
+        />
+        <UserProfile 
+          userId={viewingProfileId}
+          currentUserId={user.id}
+          darkMode={darkMode}
+          onBack={() => setViewingProfileId(null)}
+        />
+        {showLogoutConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className={`${colors.cardBg} rounded-2xl shadow-2xl p-8 max-w-sm border ${colors.border}`}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className={`text-2xl font-bold ${colors.text}`}>Confirm Logout</h2>
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className={`p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition`}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <p className={`${colors.textMuted} mb-8`}>
+                Are you sure you want to log out? You'll need to sign in again to access your account.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className={`flex-1 px-4 py-2.5 rounded-lg font-semibold transition ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'}`}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmLogout}
+                  className="flex-1 px-4 py-2.5 rounded-lg font-semibold transition bg-red-500 hover:bg-red-600 text-white"
+                >
+                  Confirm Logout
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'home':
@@ -132,6 +186,7 @@ export default function Dashboard({ user, neighborhood, onLogout, darkMode, setD
         darkMode={darkMode}
         setDarkMode={setDarkMode}
         saveDarkModePreference={saveDarkModePreference}
+        onViewProfile={setViewingProfileId}
         onLogout={() => setShowLogoutConfirm(true)}
       />
 

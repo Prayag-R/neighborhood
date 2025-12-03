@@ -1,13 +1,15 @@
+// src/pages/Navbar.jsx
 import { Search, X, Settings, LogOut, ChevronDown, MapPin, Trophy, Sun, Moon } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:3001';
 
-export default function Navbar({ user, darkMode, setDarkMode, onLogout, saveDarkModePreference }) {
+export default function Navbar({ user, darkMode, setDarkMode, onLogout, saveDarkModePreference, onViewProfile }) {
   const [searchInput, setSearchInput] = useState('');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const searchRef = useRef(null);
 
   // Close results when clicking outside
@@ -161,6 +163,10 @@ export default function Navbar({ user, darkMode, setDarkMode, onLogout, saveDark
                     {results.map((profile) => (
                       <button
                         key={profile.id}
+                        onClick={() => {
+                          if (onViewProfile) onViewProfile(profile.id);
+                          handleClearSearch();
+                        }}
                         className={`w-full text-left px-4 py-3 border-b ${colors.resultsBorder} transition ${colors.hoverLight} flex items-start gap-3`}
                       >
                         <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center flex-shrink-0">
@@ -225,8 +231,11 @@ export default function Navbar({ user, darkMode, setDarkMode, onLogout, saveDark
             </button>
 
             {/* User Menu */}
-            <div className="relative group">
-              <button className={`flex items-center gap-2 px-3 py-2 rounded-lg transition ${colors.hoverLight}`}>
+            <div className="relative">
+              <button 
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition ${colors.hoverLight}`}
+              >
                 <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
                   <span className="text-white text-sm font-bold">
                     {user?.full_name?.[0] || 'U'}
@@ -235,27 +244,42 @@ export default function Navbar({ user, darkMode, setDarkMode, onLogout, saveDark
                 <span className={`text-sm font-medium hidden sm:inline ${colors.text}`}>
                   {user?.full_name || 'User'}
                 </span>
-                <ChevronDown size={16} className={`${colors.textMuted} hidden sm:inline`} />
+                <ChevronDown size={16} className={`${colors.textMuted} hidden sm:inline transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
               </button>
 
               {/* Dropdown Menu */}
-              <div className={`absolute right-0 mt-2 w-48 ${colors.inputBg} border ${colors.inputBorder} rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 py-2 z-50`}>
-                <div className={`px-4 py-2 border-b ${colors.inputBorder}`}>
-                  <p className={`text-sm font-medium ${colors.text}`}>{user?.full_name}</p>
-                  <p className={`text-xs ${colors.textMuted}`}>{user?.email}</p>
+              {showUserMenu && (
+                <div className={`absolute right-0 mt-2 w-48 ${colors.inputBg} border ${colors.inputBorder} rounded-lg shadow-lg py-2 z-50`}>
+                  <div className={`px-4 py-2 border-b ${colors.inputBorder}`}>
+                    <p className={`text-sm font-medium ${colors.text}`}>{user?.full_name}</p>
+                    <p className={`text-xs ${colors.textMuted}`}>{user?.email}</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      if (onViewProfile) onViewProfile(user?.id);
+                      setShowUserMenu(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${colors.text} ${colors.hoverLight} transition`}
+                  >
+                    <Settings size={16} />
+                    View My Profile
+                  </button>
+                  <button className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${colors.text} ${colors.hoverLight} transition`}>
+                    <Settings size={16} />
+                    Settings
+                  </button>
+                  <button
+                    onClick={() => {
+                      onLogout();
+                      setShowUserMenu(false);
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 text-red-500 hover:bg-red-500/10 transition`}
+                  >
+                    <LogOut size={16} />
+                    Log Out
+                  </button>
                 </div>
-                <button className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 ${colors.text} ${colors.hoverLight} transition`}>
-                  <Settings size={16} />
-                  Settings
-                </button>
-                <button
-                  onClick={onLogout}
-                  className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 text-red-500 hover:bg-red-500/10 transition`}
-                >
-                  <LogOut size={16} />
-                  Log Out
-                </button>
-              </div>
+              )}
             </div>
           </div>
         </div>
