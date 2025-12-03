@@ -27,9 +27,9 @@ const allowedOrigins = [
   'https://neighborhood-e2i10ed9y-prayag-rs-projects.vercel.app'
 ];
 
-app.use(cors({ 
-  origin: allowedOrigins,
-  credentials: true,
+app.use(cors({
+  origin: '*',
+  credentials: false,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
