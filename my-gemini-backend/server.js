@@ -24,16 +24,11 @@ const supabase = createClient(
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://neighborhood-e2i10ed9y-prayag-rs-projects.vercel.app'
+  'https://neighborhood-pearl.vercel.app'
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'https://neighborhood-pearl.vercel.app'
-    ];
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
@@ -278,7 +273,7 @@ app.post('/api/reverse-geocode', async (req, res) => {
 ===================================================== */
 
 /**
- * Get user profile
+ * Get user profile by ID (works for any user)
  */
 app.post('/api/get-profile', async (req, res) => {
   const { id } = req.body;
@@ -332,68 +327,8 @@ app.post('/api/get-profile-neighborhood', async (req, res) => {
 });
 
 /**
- * Search for users by name or skills
+ * Save or update user profile
  */
-app.post('/api/search-users', async (req, res) => {
-  const { query, excludeUserId } = req.body;
-  
-  if (!query || query.trim().length < 2) {
-    return res.status(400).json({ error: 'Search query must be at least 2 characters' });
-  }
-
-  try {
-    const searchTerm = `%${query}%`;
-    
-    let dbQuery = supabase
-      .from('profiles')
-      .select('id, full_name, bio, avatar_url, skills_teaching, skills_learning, neighborhood_name, reputation_score')
-      .or(`full_name.ilike.${searchTerm},bio.ilike.${searchTerm}`);
-
-    // Exclude current user from results
-    if (excludeUserId) {
-      dbQuery = dbQuery.neq('id', excludeUserId);
-    }
-
-    const { data, error } = await dbQuery.limit(20);
-
-    if (error) throw error;
-
-    res.json(data || []);
-  } catch (error) {
-    console.error('Search users error:', error);
-    res.status(500).json({ error: 'Failed to search users' });
-  }
-});
-
-/**
- * Get public user profile by ID
- */
-app.post('/api/get-user-profile', async (req, res) => {
-  const { userId } = req.body;
-  
-  if (!userId) {
-    return res.status(400).json({ error: 'User ID is required' });
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, bio, avatar_url, skills_teaching, skills_learning, neighborhood_name, city, lat, lng, reputation_score, verified, hourly_rate')
-      .eq('id', userId)
-      .single();
-
-    if (error) throw error;
-
-    if (!data) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    res.json(data);
-  } catch (error) {
-    console.error('Get user profile error:', error);
-    res.status(500).json({ error: 'Failed to fetch user profile' });
-  }
-});
 app.post('/api/save-profile', async (req, res) => {
   const { id, ...profileData } = req.body;
   
@@ -440,7 +375,7 @@ app.post('/api/search-users', async (req, res) => {
     
     let dbQuery = supabase
       .from('profiles')
-      .select('id, full_name, bio, avatar_url, skills_teaching, skills_learning, neighborhood_name, reputation_score')
+      .select('id, full_name, bio, avatar_url, skills_teaching, skills_learning, neighborhood_name, reputation_score, city, hourly_rate')
       .or(`full_name.ilike.${searchTerm},bio.ilike.${searchTerm}`);
 
     if (excludeUserId) {
@@ -455,36 +390,6 @@ app.post('/api/search-users', async (req, res) => {
   } catch (error) {
     console.error('Search users error:', error);
     res.status(500).json({ error: 'Failed to search users' });
-  }
-});
-
-/**
- * Get public user profile by ID
- */
-app.post('/api/get-user-profile', async (req, res) => {
-  const { userId } = req.body;
-  
-  if (!userId) {
-    return res.status(400).json({ error: 'User ID is required' });
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, bio, avatar_url, skills_teaching, skills_learning, neighborhood_name, city, lat, lng, reputation_score, verified, hourly_rate')
-      .eq('id', userId)
-      .single();
-
-    if (error) throw error;
-
-    if (!data) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    res.json(data);
-  } catch (error) {
-    console.error('Get user profile error:', error);
-    res.status(500).json({ error: 'Failed to fetch user profile' });
   }
 });
 
