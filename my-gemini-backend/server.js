@@ -10,10 +10,7 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
-app.get("/test", (req, res) => {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.json({ ok: true });
-});
+
 // Backend-only keys
 const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY;
 
@@ -27,25 +24,15 @@ const supabase = createClient(
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:5173',
-  'https://neighborhood-pearl.vercel.app'
+  'https://neighborhood-e2i10ed9y-prayag-rs-projects.vercel.app'
 ];
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        console.warn(`🚫 CORS blocked request from origin: ${origin}`);
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
-app.options(/.*/, cors());
+app.use(cors({ 
+  origin: allowedOrigins,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 app.use(express.json());
 
@@ -333,8 +320,68 @@ app.post('/api/get-profile-neighborhood', async (req, res) => {
 });
 
 /**
- * Save or update user profile + neighborhood
+ * Search for users by name or skills
  */
+app.post('/api/search-users', async (req, res) => {
+  const { query, excludeUserId } = req.body;
+  
+  if (!query || query.trim().length < 2) {
+    return res.status(400).json({ error: 'Search query must be at least 2 characters' });
+  }
+
+  try {
+    const searchTerm = `%${query}%`;
+    
+    let dbQuery = supabase
+      .from('profiles')
+      .select('id, full_name, bio, avatar_url, skills_teaching, skills_learning, neighborhood_name, reputation_score')
+      .or(`full_name.ilike.${searchTerm},bio.ilike.${searchTerm}`);
+
+    // Exclude current user from results
+    if (excludeUserId) {
+      dbQuery = dbQuery.neq('id', excludeUserId);
+    }
+
+    const { data, error } = await dbQuery.limit(20);
+
+    if (error) throw error;
+
+    res.json(data || []);
+  } catch (error) {
+    console.error('Search users error:', error);
+    res.status(500).json({ error: 'Failed to search users' });
+  }
+});
+
+/**
+ * Get public user profile by ID
+ */
+app.post('/api/get-user-profile', async (req, res) => {
+  const { userId } = req.body;
+  
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required' });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, bio, avatar_url, skills_teaching, skills_learning, neighborhood_name, city, lat, lng, reputation_score, verified, hourly_rate')
+      .eq('id', userId)
+      .single();
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Get user profile error:', error);
+    res.status(500).json({ error: 'Failed to fetch user profile' });
+  }
+});
 app.post('/api/save-profile', async (req, res) => {
   const { id, ...profileData } = req.body;
   
@@ -359,6 +406,73 @@ app.post('/api/save-profile', async (req, res) => {
     console.error('Supabase update error:', error);
     console.error('Error details:', JSON.stringify(error, null, 2));
     res.status(500).json({ error: `Failed to save profile: ${error.message}` });
+  }
+});
+
+/* =====================================================
+   SEARCH & DISCOVERY ENDPOINTS
+===================================================== */
+
+/**
+ * Search for users by name or skills
+ */
+app.post('/api/search-users', async (req, res) => {
+  const { query, excludeUserId } = req.body;
+  
+  if (!query || query.trim().length < 2) {
+    return res.status(400).json({ error: 'Search query must be at least 2 characters' });
+  }
+
+  try {
+    const searchTerm = `%${query}%`;
+    
+    let dbQuery = supabase
+      .from('profiles')
+      .select('id, full_name, bio, avatar_url, skills_teaching, skills_learning, neighborhood_name, reputation_score')
+      .or(`full_name.ilike.${searchTerm},bio.ilike.${searchTerm}`);
+
+    if (excludeUserId) {
+      dbQuery = dbQuery.neq('id', excludeUserId);
+    }
+
+    const { data, error } = await dbQuery.limit(20);
+
+    if (error) throw error;
+
+    res.json(data || []);
+  } catch (error) {
+    console.error('Search users error:', error);
+    res.status(500).json({ error: 'Failed to search users' });
+  }
+});
+
+/**
+ * Get public user profile by ID
+ */
+app.post('/api/get-user-profile', async (req, res) => {
+  const { userId } = req.body;
+  
+  if (!userId) {
+    return res.status(400).json({ error: 'User ID is required' });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, bio, avatar_url, skills_teaching, skills_learning, neighborhood_name, city, lat, lng, reputation_score, verified, hourly_rate')
+      .eq('id', userId)
+      .single();
+
+    if (error) throw error;
+
+    if (!data) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json(data);
+  } catch (error) {
+    console.error('Get user profile error:', error);
+    res.status(500).json({ error: 'Failed to fetch user profile' });
   }
 });
 
