@@ -1,6 +1,7 @@
 // src/pages/Dashboard.jsx - MAIN LAYOUT & ROUTER
-import { LogOut, Settings as SettingsIcon, Zap, LayoutDashboard, Network, X, Search as SearchIcon } from 'lucide-react';
+import { LogOut, Settings as SettingsIcon, Zap, LayoutDashboard, Network, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import Navbar from './Navbar';
 import DashboardHome from './DashboardPages/DashboardHome';
 import MySkills from './DashboardPages/MySkills';
 import Settings from './DashboardPages/Settings';
@@ -120,107 +121,107 @@ export default function Dashboard({ user, neighborhood, onLogout, darkMode, setD
   };
 
   return (
-    <div className={`min-h-screen ${colors.bg} ${colors.text} transition-colors`}>
-      <div className="flex">
-        {/* Sidebar */}
-        <aside className={`w-64 flex-shrink-0 min-h-screen sticky top-0 border-r ${colors.border} ${colors.nav} p-6 shadow-xl`}>
-          <div className="flex items-center gap-2 mb-10">
-            <div className={`w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg`}>
-              <Network size={18} className="text-white" />
+    <>
+      {/* Top Navbar */}
+      <Navbar 
+        user={user}
+        darkMode={darkMode}
+        setDarkMode={setDarkMode}
+        onLogout={() => setShowLogoutConfirm(true)}
+      />
+
+      <div className={`min-h-screen ${colors.bg} ${colors.text} transition-colors`}>
+        <div className="flex">
+          {/* Sidebar */}
+          <aside className={`w-64 flex-shrink-0 min-h-screen sticky top-16 border-r ${colors.border} ${colors.nav} p-6 shadow-xl`}>
+            <div className="flex items-center gap-2 mb-10">
+              <div className={`w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-500 rounded-full flex items-center justify-center shadow-lg`}>
+                <Network size={18} className="text-white" />
+              </div>
+              <span className={`font-extrabold text-2xl ${colors.text}`}>SkillShare</span>
             </div>
-            <span className={`font-extrabold text-2xl ${colors.text}`}>SkillShare</span>
-          </div>
 
-          <nav className="space-y-2">
-            {navItems.map((item) => (
+            <nav className="space-y-2">
+              {navItems.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => handleTabChange(item.id)}
+                  className={`w-full flex items-center gap-3 p-3 rounded-xl font-semibold transition ${activeTab === item.id ? colors.active : colors.inactive}`}
+                >
+                  <item.icon size={20} />
+                  <span>{item.label}</span>
+                </button>
+              ))}
+            </nav>
+
+            <div className="mt-auto pt-6 border-t border-gray-700 dark:border-gray-600">
+              {/* Logout Button */}
               <button
-                key={item.id}
-                onClick={() => handleTabChange(item.id)}
-                className={`w-full flex items-center gap-3 p-3 rounded-xl font-semibold transition ${activeTab === item.id ? colors.active : colors.inactive}`}
+                onClick={() => setShowLogoutConfirm(true)}
+                className={`w-full flex items-center gap-3 p-3 rounded-xl font-semibold transition text-red-500 hover:bg-red-500/10`}
               >
-                <item.icon size={20} />
-                <span>{item.label}</span>
+                <LogOut size={20} />
+                <span>Log Out</span>
               </button>
-            ))}
-          </nav>
+            </div>
+          </aside>
 
-          <div className="mt-auto pt-6 border-t border-gray-700 dark:border-gray-600">
-            {/* Logout Button */}
-            <button
-              onClick={() => setShowLogoutConfirm(true)}
-              className={`w-full flex items-center gap-3 p-3 rounded-xl font-semibold transition text-red-500 hover:bg-red-500/10`}
-            >
-              <LogOut size={20} />
-              <span>Log Out</span>
-            </button>
-          </div>
-        </aside>
+          {/* Main Content Area */}
+          <main className="flex-1 p-8">
+            <header className={`mb-10 pb-4 border-b ${colors.border}`}>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h1 className={`text-4xl font-extrabold ${colors.text}`}>
+                    {navItems.find(item => item.id === activeTab)?.label}
+                  </h1>
+                  <p className="text-sm text-gray-500">Welcome, {userName}!</p>
+                </div>
+              </div>
+            </header>
 
-        {/* Main Content Area */}
-        <main className="flex-1 p-8">
-          <header className={`mb-10 pb-4 border-b ${colors.border}`}>
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h1 className={`text-4xl font-extrabold ${colors.text}`}>
-                  {navItems.find(item => item.id === activeTab)?.label}
-                </h1>
-                <p className="text-sm text-gray-500">Welcome, {userName}!</p>
+            {/* Render the Active Tab Content */}
+            <div className="space-y-8">
+              {renderTabContent()}
+            </div>
+          </main>
+        </div>
+
+        {/* Logout Confirmation Modal */}
+        {showLogoutConfirm && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+            <div className={`${colors.cardBg} rounded-2xl shadow-2xl p-8 max-w-sm border ${colors.border}`}>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className={`text-2xl font-bold ${colors.text}`}>Confirm Logout</h2>
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className={`p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition`}
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <p className={`${colors.textMuted} mb-8`}>
+                Are you sure you want to log out? You'll need to sign in again to access your account.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowLogoutConfirm(false)}
+                  className={`flex-1 px-4 py-2.5 rounded-lg font-semibold transition ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'}`}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmLogout}
+                  className="flex-1 px-4 py-2.5 rounded-lg font-semibold transition bg-red-500 hover:bg-red-600 text-white"
+                >
+                  Confirm Logout
+                </button>
               </div>
             </div>
-
-            {/* Search Bar */}
-            <div className={`relative flex items-center ${colors.inputBg} border ${colors.border} rounded-lg p-1 max-w-md`}>
-              <SearchIcon size={18} className={`ml-3 ${colors.textMuted}`} />
-              <input
-                type="text"
-                placeholder="Search for skills or people..."
-                className={`flex-1 px-4 py-2.5 ${colors.inputBg} border-0 focus:outline-none ${colors.text} text-sm placeholder-gray-400`}
-              />
-            </div>
-          </header>
-
-          {/* Render the Active Tab Content */}
-          <div className="space-y-8">
-            {renderTabContent()}
           </div>
-        </main>
+        )}
       </div>
-
-      {/* Logout Confirmation Modal */}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className={`${colors.cardBg} rounded-2xl shadow-2xl p-8 max-w-sm border ${colors.border}`}>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className={`text-2xl font-bold ${colors.text}`}>Confirm Logout</h2>
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className={`p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition`}
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            <p className={`${colors.textMuted} mb-8`}>
-              Are you sure you want to log out? You'll need to sign in again to access your account.
-            </p>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className={`flex-1 px-4 py-2.5 rounded-lg font-semibold transition ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-900'}`}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmLogout}
-                className="flex-1 px-4 py-2.5 rounded-lg font-semibold transition bg-red-500 hover:bg-red-600 text-white"
-              >
-                Confirm Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    </>
   );
 }
