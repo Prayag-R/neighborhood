@@ -46,6 +46,137 @@ app.use(express.json());
 // Password hashing config
 const SALT_ROUNDS = 10;
 
+// Perspective API key
+const PERSPECTIVE_API_KEY = process.env.PERSPECTIVE_API_KEY;
+const PERSPECTIVE_API_URL = 'https://commentanalyzer.googleapis.com/v1alpha1/comments:analyzeComment';
+
+/**
+ * Check if text is a valid skill using Perspective API and relevance checks
+ */
+const checkSkillValidity = async (text) => {
+  if (!PERSPECTIVE_API_KEY) {
+    console.warn('Perspective API key not configured, skipping toxicity check');
+    return { isValid: true, reason: null };
+  }
+
+  try {
+    // Check toxicity
+    const response = await fetch(PERSPECTIVE_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        comment: { text },
+        requestedAttributes: {
+          TOXICITY: {},
+          SPAM: {},
+          PROFANITY: {},
+        },
+        languages: ['en'],
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.error) {
+      console.error('Perspective API error:', data.error.message);
+      return { isValid: true, reason: null };
+    }
+
+    const toxicityScore = data.attributeScores?.TOXICITY?.summaryScore?.value || 0;
+    const spamScore = data.attributeScores?.SPAM?.summaryScore?.value || 0;
+    const profanityScore = data.attributeScores?.PROFANITY?.summaryScore?.value || 0;
+
+    // Check if toxic/spam/profane
+    if (toxicityScore > 0.7 || spamScore > 0.8 || profanityScore > 0.7) {
+      return { 
+        isValid: false, 
+        reason: 'Skill contains inappropriate content. Please use a different skill name.',
+      };
+    }
+
+    // Relevance checks - pattern matching for common irrelevant phrases
+    const lowerText = text.toLowerCase().trim();
+    
+    const irrelevantPatterns = [
+      /^i\s+/,  // "i had", "i like", "i went"
+      /^today/i,
+      /^yesterday/i,
+      /^tomorrow/i,
+      /^yesterday\s+i/i,
+      /^this\s+(morning|afternoon|evening|week|month)/i,
+      /^last\s+(night|week|month)/i,
+      /\d{1,2}[:.]?\d{2}\s*(am|pm|a\.m|p\.m)/i,  // Times like "3:30 pm"
+      /^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s*,?/i,  // Days
+      /^at\s+\d/,  // "at 3", "at 5 pm"
+      /^(was|were|had|have|has|do|did|does)\s+/i,  // Verbs in past tense (story telling)
+      /^the\s+(weather|food|coffee|lunch|breakfast|dinner|movie|show|game)/i,
+      /^(so|and|but|or|because)\s+/i,  // Starting with conjunctions
+      /(\s+today|\s+yesterday|\s+tomorrow)$/i,  // Ending with time references
+      /\s+(in\s+the\s+(morning|afternoon|evening)|last\s+night)$/i,
+    ];
+
+    const isIrrelevant = irrelevantPatterns.some(pattern => pattern.test(lowerText));
+
+    if (isIrrelevant) {
+      return { 
+        isValid: false, 
+        reason: 'This appears to be a sentence or event, not a skill. Please enter an actual skill (e.g., "Web Design", "Python", "Guitar").',
+      };
+    }
+
+    // Check if it's too sentence-like (has common sentence patterns)
+    const wordCount = lowerText.split(/\s+/).length;
+    if (wordCount > 8) {
+      return { 
+        isValid: false, 
+        reason: 'Skill name is too long. Keep it to a few words (e.g., "Graphic Design", "Data Analysis").',
+      };
+    }
+
+    return { isValid: true, reason: null };
+  } catch (error) {
+    console.error('Skill validity check error:', error);
+    return { isValid: true, reason: null };
+  }
+};
+
+/**
+ * Validate skill name
+ */
+const validateSkillName = (skillName) => {
+  if (!skillName || typeof skillName !== 'string') {
+    return { valid: false, error: 'Skill name must be a string' };
+  }
+
+  const trimmed = skillName.trim();
+
+  // Check length (2-50 characters)
+  if (trimmed.length < 2) {
+    return { valid: false, error: 'Skill must be at least 2 characters' };
+  }
+
+  if (trimmed.length > 50) {
+    return { valid: false, error: 'Skill must be less than 50 characters' };
+  }
+
+  // Check for repeated characters (aaaaaaa, 12121212, etc)
+  if (/(.)\1{5,}/.test(trimmed)) {
+    return { valid: false, error: 'Skill contains too many repeated characters' };
+  }
+
+  // Check for excessive numbers
+  if (/\d{10,}/.test(trimmed)) {
+    return { valid: false, error: 'Skill contains too many numbers' };
+  }
+
+  // Allow letters, numbers, spaces, hyphens, ampersands, slashes, plus signs
+  if (!/^[a-zA-Z0-9\s\-&+/]+$/.test(trimmed)) {
+    return { valid: false, error: 'Skill can only contain letters, numbers, spaces, and basic symbols (&, +, /)' };
+  }
+
+  return { valid: true };
+};
+
 /* =====================================================
    AUTHENTICATION ENDPOINTS
 ===================================================== */
@@ -390,6 +521,172 @@ app.post('/api/search-users', async (req, res) => {
   } catch (error) {
     console.error('Search users error:', error);
     res.status(500).json({ error: 'Failed to search users' });
+  }
+});
+
+/* =====================================================
+   SKILLS ENDPOINTS
+===================================================== */
+
+/**
+ * Validate and add skill to user
+ */
+app.post('/api/add-skill', async (req, res) => {
+  const { userId, skillName, skillType } = req.body;
+
+  if (!userId || !skillName || !skillType) {
+    return res.status(400).json({ error: 'User ID, skill name, and skill type required' });
+  }
+
+  if (!['teaching', 'learning'].includes(skillType)) {
+    return res.status(400).json({ error: 'Skill type must be "teaching" or "learning"' });
+  }
+
+  // Validate skill name format
+  const validation = validateSkillName(skillName);
+  if (!validation.valid) {
+    return res.status(400).json({ error: validation.error });
+  }
+
+  try {
+    // Check validity with Perspective API and relevance checks
+    const validityCheck = await checkSkillValidity(skillName);
+
+    if (!validityCheck.isValid) {
+      return res.status(400).json({ error: validityCheck.reason });
+    }
+
+    const cleanSkillName = skillName.trim().toLowerCase();
+
+    // Get current skills array
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select(skillType === 'teaching' ? 'skills_teaching' : 'skills_learning')
+      .eq('id', userId)
+      .single();
+
+    if (profileError) throw profileError;
+
+    const skillsArray = skillType === 'teaching' ? (profile?.skills_teaching || []) : (profile?.skills_learning || []);
+
+    // Check if skill already exists
+    if (skillsArray.some(s => s.toLowerCase() === cleanSkillName)) {
+      return res.status(409).json({ error: 'User already has this skill' });
+    }
+
+    // Add skill to array
+    const updatedSkills = [...skillsArray, cleanSkillName];
+
+    const updateData = skillType === 'teaching' 
+      ? { skills_teaching: updatedSkills }
+      : { skills_learning: updatedSkills };
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', userId);
+
+    if (updateError) throw updateError;
+
+    res.json({ 
+      success: true, 
+      skill: cleanSkillName,
+      skillType,
+    });
+  } catch (error) {
+    console.error('Add skill error:', error);
+    res.status(500).json({ error: 'Failed to add skill' });
+  }
+});
+
+/**
+ * Remove skill from user
+ */
+app.post('/api/remove-skill', async (req, res) => {
+  const { userId, skillName, skillType } = req.body;
+
+  if (!userId || !skillName || !skillType) {
+    return res.status(400).json({ error: 'User ID, skill name, and skill type required' });
+  }
+
+  try {
+    const cleanSkillName = skillName.trim().toLowerCase();
+
+    const updateData = skillType === 'teaching' 
+      ? { skills_teaching: null }
+      : { skills_learning: null };
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select(skillType === 'teaching' ? 'skills_teaching' : 'skills_learning')
+      .eq('id', userId)
+      .single();
+
+    if (profileError) throw profileError;
+
+    const skillsArray = skillType === 'teaching' ? (profile?.skills_teaching || []) : (profile?.skills_learning || []);
+    const updatedSkills = skillsArray.filter(s => s.toLowerCase() !== cleanSkillName);
+
+    const finalUpdateData = skillType === 'teaching' 
+      ? { skills_teaching: updatedSkills }
+      : { skills_learning: updatedSkills };
+
+    const { error: updateError } = await supabase
+      .from('profiles')
+      .update(finalUpdateData)
+      .eq('id', userId);
+
+    if (updateError) throw updateError;
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Remove skill error:', error);
+    res.status(500).json({ error: 'Failed to remove skill' });
+  }
+});
+
+/**
+ * Find users by skill
+ */
+app.post('/api/find-users-by-skill', async (req, res) => {
+  const { skillName, skillType, excludeUserId } = req.body;
+
+  if (!skillName) {
+    return res.status(400).json({ error: 'Skill name required' });
+  }
+
+  try {
+    const cleanSkillName = skillName.trim().toLowerCase();
+    let query = supabase
+      .from('profiles')
+      .select('id, full_name, bio, neighborhood_name, avatar_url, reputation_score, skills_teaching, skills_learning, city');
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+
+    // Filter on backend for skill matching
+    let filteredUsers = data.filter(user => {
+      const teachingSkills = (user.skills_teaching || []).map(s => s.toLowerCase());
+      const learningSkills = (user.skills_learning || []).map(s => s.toLowerCase());
+
+      if (skillType === 'teaching') {
+        return teachingSkills.includes(cleanSkillName);
+      } else if (skillType === 'learning') {
+        return learningSkills.includes(cleanSkillName);
+      }
+
+      return teachingSkills.includes(cleanSkillName) || learningSkills.includes(cleanSkillName);
+    });
+
+    if (excludeUserId) {
+      filteredUsers = filteredUsers.filter(u => u.id !== excludeUserId);
+    }
+
+    res.json(filteredUsers);
+  } catch (error) {
+    console.error('Find users by skill error:', error);
+    res.status(500).json({ error: 'Failed to find users' });
   }
 });
 
